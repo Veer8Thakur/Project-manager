@@ -4,23 +4,28 @@ RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists
 
 WORKDIR /app
 
-# Copy package files (correct for backend root)
+# Copy package files
 COPY package*.json ./
 
-# Force cache bust
-RUN echo "rebuild-v3"
+# 🔥 Copy prisma BEFORE install (fixes your error)
+COPY prisma ./prisma
 
-# Debug (optional, remove later)
+# Cache bust
+RUN echo "rebuild-v4"
+
+# Debug (optional)
 RUN cat package.json
 
-# Install deps
+# Install dependencies (now prisma schema exists)
 RUN npm install
 
-# Copy rest of backend code
+# Copy rest of code
 COPY . .
 
-# Prisma + build
+# Generate prisma client (safe now)
 RUN npx prisma generate
+
+# Build TypeScript
 RUN npm run build
 
 EXPOSE 3000
