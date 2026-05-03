@@ -4,15 +4,22 @@ RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists
 
 WORKDIR /app
 
-# 🔥 Explicit copy (fixes your issue)
-COPY ./backend/package.json ./package.json
+# Copy package files (correct for backend root)
+COPY package*.json ./
 
+# Force cache bust
+RUN echo "rebuild-v3"
+
+# Debug (optional, remove later)
 RUN cat package.json
 
+# Install deps
 RUN npm install
 
-COPY ./backend .
+# Copy rest of backend code
+COPY . .
 
+# Prisma + build
 RUN npx prisma generate
 RUN npm run build
 
