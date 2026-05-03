@@ -1,20 +1,30 @@
-FROM node:20-slim AS build
-WORKDIR /app
-RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
-COPY package*.json ./
-COPY prisma ./prisma
-RUN npm install
-COPY tsconfig.json ./
-COPY src ./src
-RUN npx prisma generate && npm run build
-
+# Use Node base image
 FROM node:20-slim
-WORKDIR /app
+
+# Install openssl (needed for Prisma)
 RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
-ENV NODE_ENV=production
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/prisma ./prisma
+
+# Set working directory
+WORKDIR /app
+
+# Copy only package files first (for caching)
 COPY package*.json ./
-EXPOSE 8080
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
+
+# 🔥 Force cache bust + debug
+RUN echo "cache-bust-v2"
+RUN cat package.json
+
+# Install dependencies
+RUN npm install
+
+# Copy rest of the code
+COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Expose port (Railway uses dynamic PORT)
+EXPOSE 3000
+
+# Start app (IMPORTANT: must keep container alive)
+CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]
